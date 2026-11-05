@@ -159,69 +159,39 @@ environment.
 `Dockerfile` builds the native SQLite dependency and runs the API on the
 configured port. `fly.toml` sets `NODE_ENV=production`,
 `DATABASE_PATH=/data/2048.db`, the verified GitHub Pages CORS origin
-`https://ahavatech.github.io`, and a `/data` volume mount. It still contains
-placeholders for the Fly app, region, and volume. Do not deploy it until those
-values have been deliberately selected and the existing Fly account resources
-have been checked.
+`https://ahavatech.github.io`, and mounts the `data` volume at `/data`.
 
-### Prepare a new Fly app
+The backend is deployed at `https://2048.fly.dev` in app `2048`, region `ams`.
+One 1 GB persistent volume named `data` is attached to one active machine. The
+live health endpoint confirms database access; no production score was
+submitted during verification.
 
 The GitHub repository is `ahavatech/2048`; its Pages origin is
-`https://ahavatech.github.io`. An existing Fly app named `2048` was discovered
-in the `personal` organization. It is suspended, has two stopped machines in
-`ams`, and has no attached volumes. Its hostname is `https://2048.fly.dev`,
-but its intended ownership/use is unconfirmed. Do not create, deploy to,
-resume, or repurpose it without explicit confirmation. The observed `ams`
-region is not automatically the chosen production region.
-
-Install and authenticate the Fly CLI, then inspect resources before acting:
-
-```sh
-flyctl version
-flyctl auth login
-flyctl auth whoami
-flyctl apps list
-flyctl status --app 2048
-flyctl machine list --app 2048
-flyctl volumes list --app 2048
-flyctl regions list
-```
-
-For a **new app only**, after choosing an unused app name, organization,
-region, and volume name, create the app and one volume in that same region.
-Replace the placeholders in `fly.toml` before deploying:
-
-```sh
-flyctl apps create <NEW_APP_NAME> --org <CONFIRMED_ORG>
-flyctl volumes create <VOLUME_NAME> --app <NEW_APP_NAME> --region <REGION> --size 1
-```
-
-Set `app`, `primary_region`, and the mount `source` in `fly.toml` to those
-confirmed values. The `CORS_ORIGINS` value is already the exact Pages origin;
-the frontend API base must be the confirmed app's HTTPS origin. From
-`backend/`, deploy only after reviewing the diff and the app/volume status:
-
-```sh
-flyctl deploy --app <APP_NAME>
-flyctl status --app <APP_NAME>
-flyctl checks list --app <APP_NAME>
-```
-
-No application secrets are currently required. Runtime environment values
-including `DATABASE_PATH=/data/2048.db`, `PORT=8080`, and CORS are in
-`fly.toml`; do not store database files or secrets in the frontend. The
-configuration caps the service at one running machine. Do not scale multiple
-machines against this SQLite volume.
-
-Once the API origin is confirmed, configure the GitHub repository variable
-(not a secret), then switch Pages from the currently configured legacy
-`main`/root source to **GitHub Actions** and manually run the deployment
-workflow:
+`https://ahavatech.github.io`. Pages still uses the legacy `main`/repository
+root source. To publish the frontend through the prepared GitHub Actions
+workflow, set the repository variable, then change **Settings → Pages → Build
+and deployment → Source** to **GitHub Actions** and manually run **Actions →
+Deploy GitHub Pages → Run workflow**:
 
 ```sh
 gh variable set ARCADE_API_BASE_URL \
   --repo ahavatech/2048 \
-  --body 'https://<CONFIRMED_APP_NAME>.fly.dev'
+  --body 'https://2048.fly.dev'
+```
+
+No application secrets are required. Runtime environment values including
+`DATABASE_PATH=/data/2048.db`, `PORT=8080`, and CORS are in `fly.toml`; do not
+store database files or secrets in the frontend. The configuration is for one
+active machine only. Do not scale multiple machines against this SQLite
+volume.
+
+For future backend code changes, commit and push the changes, then deploy from
+`backend/` after reviewing the diff:
+
+```sh
+flyctl deploy --app 2048
+flyctl status --app 2048
+flyctl checks list --app 2048
 ```
 
 Do not use a path, wildcard CORS, or trailing slash. The Pages workflow stages
@@ -230,19 +200,17 @@ only `index.html`, `styles.css`, `game-engine.js`, `leaderboard-api.js`, and
 
 ### Verify and operate
 
-Use the app's actual hostname in place of `<APP_NAME>`:
-
 ```sh
-curl -fsS https://<APP_NAME>.fly.dev/api/v1/health
-curl -fsS 'https://<APP_NAME>.fly.dev/api/v1/leaderboard/rank?score=2400'
-curl -fsS https://<APP_NAME>.fly.dev/api/v1/leaderboard
+curl -fsS https://2048.fly.dev/api/v1/health
+curl -fsS 'https://2048.fly.dev/api/v1/leaderboard/rank?score=2400'
+curl -fsS https://2048.fly.dev/api/v1/leaderboard
 ```
 
-Swagger UI is at `https://<APP_NAME>.fly.dev/api-docs`. Check the Pages
+Swagger UI is at `https://2048.fly.dev/api-docs`. Check the Pages
 preflight without submitting a score:
 
 ```sh
-curl -i -X OPTIONS 'https://<APP_NAME>.fly.dev/api/v1/scores' \
+curl -i -X OPTIONS 'https://2048.fly.dev/api/v1/scores' \
   -H 'Origin: https://ahavatech.github.io' \
   -H 'Access-Control-Request-Method: POST' \
   -H 'Access-Control-Request-Headers: content-type,idempotency-key'
@@ -251,11 +219,11 @@ curl -i -X OPTIONS 'https://<APP_NAME>.fly.dev/api/v1/scores' \
 Inspect deployment health, logs, volume allocation, and actual filesystem use:
 
 ```sh
-flyctl status --app <APP_NAME>
-flyctl checks list --app <APP_NAME>
-flyctl logs --app <APP_NAME>
-flyctl volumes list --app <APP_NAME>
-flyctl ssh console --app <APP_NAME> --user node --command "df -h /data"
+flyctl status --app 2048
+flyctl checks list --app 2048
+flyctl logs --app 2048
+flyctl volumes list --app 2048
+flyctl ssh console --app 2048 --user node --command "df -h /data"
 ```
 
 Do not make a public score submission as a production smoke test without
@@ -277,10 +245,10 @@ running unsafe. `src/db/backup.js` uses SQLite's online backup API. Create a
 backup on the attached volume, then copy it to independent storage:
 
 ```sh
-flyctl ssh console --app <APP_NAME> --user node \
+flyctl ssh console --app 2048 --user node \
   --command "node src/db/backup.js /data/backups/2048-YYYY-MM-DD.db"
 flyctl ssh sftp get /data/backups/2048-YYYY-MM-DD.db ./2048-YYYY-MM-DD.db \
-  --app <APP_NAME> --user node
+  --app 2048 --user node
 ```
 
 Keep multiple dated copies outside the Fly Volume and repository, protect
@@ -297,8 +265,8 @@ window. Upload the backup to the existing volume and restore it to a new path:
 
 ```sh
 flyctl ssh sftp put ./2048-YYYY-MM-DD.db /data/restore-source.db \
-  --app <APP_NAME> --user node
-flyctl ssh console --app <APP_NAME> --user node \
+  --app 2048 --user node
+flyctl ssh console --app 2048 --user node \
   --command "node src/db/restore.js /data/restore-source.db /data/2048-restored.db"
 ```
 
@@ -310,10 +278,11 @@ and persistence before accepting the restore. A rollback to the old path can
 discard scores submitted to the restored database after the switch, so pause
 submissions or account for that data before changing paths again.
 
-On an outage, inspect `flyctl status`, `flyctl checks list`, and `flyctl logs`,
+On an outage, inspect `flyctl status --app 2048`, `flyctl checks list --app
+2048`, and `flyctl logs --app 2048`,
 then check volume attachment and free space. Do not create another machine
 against the same database volume. Redeploy a reviewed code change from this
-directory with `flyctl deploy --app <APP_NAME>`; do not change app, volume, or
+directory with `flyctl deploy --app 2048`; do not change app, volume, or
 machine count as an outage shortcut.
 
 ## Security limitations

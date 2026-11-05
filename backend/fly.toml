@@ -1,7 +1,7 @@
-# Replace these placeholders before deploying. Do not reuse a volume for
-# concurrent writer machines; this SQLite setup is for one active machine.
-app = "<REPLACE_WITH_FLY_APP_NAME>"
-primary_region = "<REPLACE_WITH_FLY_REGION>"
+# Do not reuse this volume for concurrent writer machines; this SQLite setup
+# is for one active machine.
+app = "2048"
+primary_region = "ams"
 
 [build]
   dockerfile = "Dockerfile"
@@ -31,7 +31,7 @@ primary_region = "<REPLACE_WITH_FLY_REGION>"
     grace_period = "10s"
 
 [mounts]
-  source = "<REPLACE_WITH_FLY_VOLUME_NAME>"
+  source = "data"
   destination = "/data"
 
 [[vm]]

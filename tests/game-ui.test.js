@@ -6,7 +6,7 @@ const vm = require('node:vm')
 const GameEngine = require('../game-engine')
 
 const ids = [
-  'grid', 'score', 'best-score', 'game-info', 'game-status', 'arcade-screen', 'arcade-heading',
+  'grid', 'score', 'best-score', 'game-info', 'game-credits', 'game-status', 'arcade-screen', 'arcade-heading',
   'mock-badge', 'final-score', 'highest-tile', 'move-count', 'game-duration',
   'local-best', 'rank-error-title', 'rank-error-message', 'rank-value',
   'rank-description', 'rank-invitation', 'not-qualified', 'leaderboard-limit',
@@ -28,6 +28,20 @@ class FakeElement {
     this.attributes = {}
     this.listeners = new Map()
     this.hidden = false
+    this.className = ''
+    this.classList = {
+      add: token => {
+        const classes = new Set(this.className.split(/\s+/).filter(Boolean))
+        classes.add(token)
+        this.className = [...classes].join(' ')
+      },
+      remove: token => {
+        this.className = this.className
+          .split(/\s+/)
+          .filter(className => className && className !== token)
+          .join(' ')
+      }
+    }
     this.textContent = ''
     this.value = ''
     this.disabled = false
@@ -155,6 +169,7 @@ function createApp({ api = makeApi().api, outcome, initialState } = {}) {
   const elements = new Map(ids.map(id => [id, new FakeElement()]))
   elements.get('display-name').setAttribute('maxlength', '12')
   const document = new FakeElement()
+  document.body = new FakeElement()
   document.getElementById = id => elements.get(id)
   document.createElement = () => new FakeElement()
   const stored = new Map()
@@ -226,8 +241,13 @@ test('game end shows final score, highest tile, moves, duration, and rank loadin
 
   assert.equal(app.elements.get('arcade-heading').textContent, 'GAME OVER')
   assert.equal(app.elements.get('arcade-screen').hidden, false)
-  assert.equal(app.elements.get('grid').hidden, true)
-  assert.equal(app.elements.get('game-info').hidden, true)
+  assert.equal(app.elements.get('arcade-screen').focused, true)
+  assert.equal(app.elements.get('grid').hidden, false)
+  assert.equal(app.elements.get('game-info').hidden, false)
+  assert.equal(app.elements.get('grid').inert, true)
+  assert.equal(app.elements.get('game-info').inert, true)
+  assert.equal(app.elements.get('game-credits').inert, true)
+  assert.match(app.document.body.className, /game-over-open/)
   assert.match(app.elements.get('game-status').className, /visually-hidden/)
   assert.equal(app.elements.get('final-score').textContent, '2400')
   assert.equal(app.elements.get('highest-tile').textContent, '2048')
@@ -353,6 +373,10 @@ test('declining does not submit a score, returns to the summary, and replay pres
   assert.equal(app.elements.get('arcade-screen').hidden, true)
   assert.equal(app.elements.get('grid').hidden, false)
   assert.equal(app.elements.get('game-info').hidden, false)
+  assert.equal(app.elements.get('grid').inert, false)
+  assert.equal(app.elements.get('game-info').inert, false)
+  assert.equal(app.elements.get('game-credits').inert, false)
+  assert.doesNotMatch(app.document.body.className, /game-over-open/)
   assert.equal(app.elements.get('best-score').textContent, '2400')
   assert.equal(app.document.listenerCount('keydown'), 1)
 })

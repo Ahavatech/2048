@@ -35,11 +35,11 @@ variable `ARCADE_API_BASE_URL`:
 ```sh
 gh variable set ARCADE_API_BASE_URL \
   --repo ahavatech/2048 \
-  --body 'https://<CONFIRMED_FLY_APP_NAME>.fly.dev'
+  --body 'https://2048.fly.dev'
 ```
 
-Replace the placeholder with the confirmed Fly hostname, using only its HTTPS
-origin (no path or trailing slash). It is public configuration, not a secret.
+The deployed API origin is `https://2048.fly.dev`; use only this HTTPS origin,
+with no path or trailing slash. It is public configuration, not a secret.
 Never put backend secrets in the frontend. The workflow is manual so it cannot
 publish until deliberately run, and it fails before deployment if the variable
 is missing or is not an HTTPS origin. If the API is unavailable, players can
@@ -140,8 +140,9 @@ python -m http.server 5500
 ```
 
 Before opening `http://localhost:5500`, set the `arcade-api-base` meta tag in
-`index.html` to `http://localhost:8080`. Restore it to the real Fly API origin
-before deploying the static site. Start the frontend from localhost rather
+`index.html` to `http://localhost:8080`. After local testing, restore the tag
+to its empty value; the Pages workflow injects the production API origin when
+it builds the published artifact. Start the frontend from localhost rather
 than opening `index.html` as a `file://` URL so browser CORS behavior matches
 deployment.
 
@@ -183,20 +184,21 @@ npm run pages:prepare
 ```
 
 For example, in PowerShell set it with
-`$env:ARCADE_API_BASE_URL = "https://<CONFIRMED_FLY_APP_NAME>.fly.dev"`.
+`$env:ARCADE_API_BASE_URL = "https://2048.fly.dev"`.
 
 The preparation script writes the allowlisted frontend files to
 `pages-artifact/`; it rejects missing, non-HTTPS, or non-origin API URLs. The
 committed HTML remains unchanged.
 
-For Fly.io, `backend/fly.toml` has the verified Pages CORS origin and
-placeholders for the app, region, and volume. An existing Fly app named
-`2048` was found, but it is suspended, has two stopped machines in `ams`, and
-has no attached volumes. Do not deploy to or repurpose it until its ownership
-and intended use are confirmed. No new app or volume has been created. The
-required SQLite path is `/data/2048.db` on one persistent volume mounted at
-`/data`. See [`backend/README.md`](./backend/README.md) for guarded commands,
-operations, backups, and restore steps. No deployment has been run.
+The backend is deployed at `https://2048.fly.dev`. It runs one Fly Machine in
+`ams`, with the 1 GB persistent volume `data` mounted at `/data` and SQLite at
+`/data/2048.db`. Health, rank preview, leaderboard, Swagger, and the exact
+GitHub Pages CORS preflight have been checked. The public leaderboard is
+currently empty; no production score was submitted during verification.
+GitHub Pages still uses its legacy `main`/root source until you switch it to
+GitHub Actions and set `ARCADE_API_BASE_URL` as described above. See
+[`backend/README.md`](./backend/README.md) for operations, backup, and restore
+steps.
 
 ## Tests
 

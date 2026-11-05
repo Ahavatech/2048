@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const scoreDisplay = document.getElementById('score')
   const bestScoreDisplay = document.getElementById('best-score')
   const gameInfo = document.getElementById('game-info')
+  const gameCredits = document.getElementById('game-credits')
   const statusDisplay = document.getElementById('game-status')
   const arcadeScreen = document.getElementById('arcade-screen')
   const arcadeHeading = document.getElementById('arcade-heading')
@@ -180,10 +181,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     gameEnded = true
     setInputEnabled(false)
-    gameInfo.hidden = true
-    grid.hidden = true
+    gameInfo.inert = true
+    grid.inert = true
+    gameCredits.inert = true
+    document.body.classList.add('game-over-open')
     statusDisplay.className = 'game-status visually-hidden'
     arcadeScreen.hidden = false
+    arcadeScreen.focus()
     arcadeHeading.textContent = 'GAME OVER'
     rankInvitation.hidden = true
     notQualified.hidden = true
@@ -459,8 +463,10 @@ document.addEventListener('DOMContentLoaded', () => {
     nameInput.readOnly = false
     clearNameError()
     arcadeScreen.hidden = true
-    gameInfo.hidden = false
-    grid.hidden = false
+    gameInfo.inert = false
+    grid.inert = false
+    gameCredits.inert = false
+    document.body.classList.remove('game-over-open')
     statusDisplay.className = 'game-status'
     leaderboardLink.hidden = true
     showMockSource('')
