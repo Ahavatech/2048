@@ -3,25 +3,146 @@
 
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="arcade-api-base" content="">
     <title>2048</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
 
-    <div class="container">
-        <div class="info">
+    <main class="container">
+        <div class="info" id="game-info">
             <h1>2048</h1>
             <div class="score-container">
-                <div class="score-title">Score</div>
-                <span id="score">0</span>
+                <div><span class="score-title">Score</span><strong id="score">0</strong></div>
+                <div><span class="score-title">Best</span><strong id="best-score">0</strong></div>
             </div>
         </div>
-        <div class="grid" id="grid"></div>
+        <p id="game-status" class="game-status" role="status" aria-live="polite" aria-atomic="true"></p>
+        <div class="grid" id="grid" role="grid" aria-label="2048 game board" aria-rowcount="4" aria-colcount="4" tabindex="0"></div>
+        <section id="arcade-screen" class="arcade-screen" aria-labelledby="arcade-heading" hidden>
+            <div class="arcade-topline">
+                <h2 id="arcade-heading">GAME OVER</h2>
+                <span id="mock-badge" class="mock-badge" hidden>DEVELOPMENT MOCK — NOT REAL RANKINGS</span>
+            </div>
+            <dl class="run-summary" aria-label="Final game summary">
+                <div class="summary-score"><dt>FINAL SCORE</dt><dd id="final-score">0</dd></div>
+                <div><dt>HIGHEST TILE</dt><dd id="highest-tile">0</dd></div>
+                <div><dt>MOVES</dt><dd id="move-count">0</dd></div>
+                <div><dt>TIME</dt><dd id="game-duration">0:00</dd></div>
+                <div><dt>LOCAL BEST</dt><dd id="local-best">0</dd></div>
+            </dl>
+
+            <section id="rank-loading" class="arcade-stage" aria-live="polite" hidden>
+                <h3>CHECKING GLOBAL RANK</h3>
+                <p>Querying the leaderboard for this score…</p>
+            </section>
+
+            <section id="rank-error" class="arcade-stage" aria-live="polite" hidden>
+                <h3 id="rank-error-title">RANK UNAVAILABLE</h3>
+                <p id="rank-error-message">The leaderboard could not be reached. Your score is still available to replay.</p>
+                <div class="arcade-actions">
+                    <button id="retry-rank" type="button">RETRY RANK CHECK</button>
+                </div>
+            </section>
+
+            <section id="rank-result" class="arcade-stage" aria-live="polite" hidden>
+                <div id="rank-copy">
+                    <p id="rank-value" class="rank-value"></p>
+                    <p id="rank-description" class="rank-description"></p>
+                </div>
+                <div id="rank-invitation" hidden>
+                    <h3>YOU MADE THE BOARD! WOULD YOU LIKE TO ENTER YOUR NAME?</h3>
+                    <div class="arcade-actions">
+                        <button id="enter-name" type="button">YES, ENTER MY NAME</button>
+                        <button id="decline-name" class="button-secondary" type="button">NO THANKS</button>
+                    </div>
+                </div>
+                <div id="not-qualified" hidden>
+                    <p>This score does not qualify for the public top <span id="leaderboard-limit">100</span>. Your name will not be published.</p>
+                </div>
+                <div id="declined" hidden>
+                    <p>No name or score was submitted. Your local best score is saved on this device.</p>
+                </div>
+            </section>
+
+            <section id="name-entry" class="arcade-stage" aria-live="polite" hidden>
+                <h3>ENTER YOUR NAME</h3>
+                <p>Your display name is the only personal detail requested.</p>
+                <form id="name-form" novalidate>
+                    <label for="display-name">ARCADE DISPLAY NAME</label>
+                    <input id="display-name" name="displayName" type="text" maxlength="12" autocomplete="off" autocapitalize="characters" aria-describedby="name-help name-counter name-error">
+                    <div class="name-field-meta">
+                        <span id="name-help">Letters, numbers, spaces, hyphens and underscores.</span>
+                        <span id="name-counter">0 / 12</span>
+                    </div>
+                    <p id="name-error" class="field-error" role="alert" hidden></p>
+                    <div class="arcade-actions">
+                        <button id="submit-score" type="submit">SUBMIT SCORE</button>
+                        <button id="cancel-name" class="button-secondary" type="button">CANCEL</button>
+                    </div>
+                </form>
+            </section>
+
+            <section id="submission-loading" class="arcade-stage" aria-live="polite" hidden>
+                <h3>SENDING YOUR SCORE</h3>
+                <p>Waiting for leaderboard confirmation…</p>
+            </section>
+
+            <section id="submission-error" class="arcade-stage" aria-live="polite" hidden>
+                <h3>SCORE NOT CONFIRMED</h3>
+                <p id="submission-error-message">The leaderboard did not confirm this score. Your name has not been published.</p>
+                <div class="arcade-actions">
+                    <button id="retry-submission" type="button">TRY AGAIN</button>
+                    <button id="cancel-submission" class="button-secondary" type="button">CANCEL</button>
+                </div>
+            </section>
+
+            <section id="submission-result" class="arcade-stage" aria-live="polite" hidden>
+                <h3 id="submission-result-title">SCORE RECORDED</h3>
+                <p id="submission-result-note"></p>
+                <dl class="confirmed-score">
+                    <div><dt>DISPLAY NAME</dt><dd id="submitted-name"></dd></div>
+                    <div><dt>FINAL SCORE</dt><dd id="submitted-score"></dd></div>
+                    <div><dt>CONFIRMED RANK</dt><dd id="submitted-rank"></dd></div>
+                </dl>
+                <div class="arcade-actions">
+                    <button id="view-leaderboard" type="button" hidden>VIEW LEADERBOARD</button>
+                </div>
+            </section>
+            <section id="leaderboard-view" class="arcade-stage" aria-labelledby="leaderboard-heading" hidden>
+                <h3 id="leaderboard-heading">GLOBAL LEADERBOARD</h3>
+                <div id="leaderboard-loading" aria-live="polite" hidden>
+                    <p>Loading verified scores…</p>
+                </div>
+                <div id="leaderboard-error" aria-live="polite" hidden>
+                    <p id="leaderboard-error-message">The leaderboard could not be loaded.</p>
+                    <div class="arcade-actions">
+                        <button id="retry-leaderboard" type="button">RETRY LEADERBOARD</button>
+                    </div>
+                </div>
+                <p id="leaderboard-empty" hidden>No scores have been submitted yet.</p>
+                <div id="leaderboard-list" class="leaderboard-table-wrap" hidden>
+                    <table>
+                        <caption>Top scores, ranked by the backend</caption>
+                        <thead>
+                            <tr><th scope="col">RANK</th><th scope="col">PLAYER</th><th scope="col">SCORE</th><th scope="col">TILE</th></tr>
+                        </thead>
+                        <tbody id="leaderboard-entries"></tbody>
+                    </table>
+                </div>
+                <div class="arcade-actions">
+                    <button id="back-to-result" class="button-secondary" type="button">BACK TO SCORE</button>
+                </div>
+            </section>
+            <button id="arcade-replay" class="button-secondary replay-button" type="button">PLAY AGAIN</button>
+        </section>
         <p class="m-0">&copy; Designed by <a href="https://github.com/Ahavatech">Ibukunoluwa Adekunle</a></p>
-    </div>
+    </main>
 
-    <script src="functions.js" charset="utf-8"></script>
+    <script src="game-engine.js"></script>
+    <script src="leaderboard-api.js"></script>
+    <script src="functions.js"></script>
 </body>
-
 </html>

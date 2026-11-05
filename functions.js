@@ -1,323 +1,562 @@
-//Primary function
-document.addEventListener('DOMContentLoaded', () =>  {
-  const gridDisplay = document.querySelector('.grid')
+document.addEventListener('DOMContentLoaded', () => {
+  const grid = document.getElementById('grid')
   const scoreDisplay = document.getElementById('score')
-  const resultDisplay = document.getElementById('result')
-  let squares = []
-  const width = 4
-  let score = 0
+  const bestScoreDisplay = document.getElementById('best-score')
+  const gameInfo = document.getElementById('game-info')
+  const statusDisplay = document.getElementById('game-status')
+  const arcadeScreen = document.getElementById('arcade-screen')
+  const arcadeHeading = document.getElementById('arcade-heading')
+  const mockBadge = document.getElementById('mock-badge')
+  const finalScoreDisplay = document.getElementById('final-score')
+  const highestTileDisplay = document.getElementById('highest-tile')
+  const moveCountDisplay = document.getElementById('move-count')
+  const durationDisplay = document.getElementById('game-duration')
+  const localBestDisplay = document.getElementById('local-best')
+  const rankErrorTitle = document.getElementById('rank-error-title')
+  const rankErrorMessage = document.getElementById('rank-error-message')
+  const rankValue = document.getElementById('rank-value')
+  const rankDescription = document.getElementById('rank-description')
+  const rankInvitation = document.getElementById('rank-invitation')
+  const notQualified = document.getElementById('not-qualified')
+  const leaderboardLimit = document.getElementById('leaderboard-limit')
+  const declined = document.getElementById('declined')
+  const nameForm = document.getElementById('name-form')
+  const nameInput = document.getElementById('display-name')
+  const nameCounter = document.getElementById('name-counter')
+  const nameError = document.getElementById('name-error')
+  const submitButton = document.getElementById('submit-score')
+  const submissionErrorMessage = document.getElementById('submission-error-message')
+  const submissionResultTitle = document.getElementById('submission-result-title')
+  const submissionResultNote = document.getElementById('submission-result-note')
+  const submittedName = document.getElementById('submitted-name')
+  const submittedScore = document.getElementById('submitted-score')
+  const submittedRank = document.getElementById('submitted-rank')
+  const leaderboardLink = document.getElementById('view-leaderboard')
+  const leaderboardEntries = document.getElementById('leaderboard-entries')
+  const leaderboardErrorMessage = document.getElementById('leaderboard-error-message')
+  const cells = []
+  const stages = [
+    'rank-loading',
+    'rank-error',
+    'rank-result',
+    'name-entry',
+    'submission-loading',
+    'submission-error',
+    'submission-result',
+    'leaderboard-view'
+  ]
+  const restartButton = document.getElementById('arcade-replay')
+  let state = GameEngine.createGame()
+  let inputEnabled = false
+  let touchStart = null
+  let moveCount = 0
+  let startedAt = now()
+  let gameEnded = false
+  let gameId = 0
+  let submissionId = null
+  let submissionInFlight = false
+  let submissionConfirmed = false
+  let submissionPayload = null
+  let rankResult = null
+  let finalRun = null
+  let bestScore = 0
+  let storageAvailable = true
+  let idSequence = 0
+  const leaderboardStates = [
+    'leaderboard-loading',
+    'leaderboard-error',
+    'leaderboard-empty',
+    'leaderboard-list'
+  ]
 
-  //create the game board
-function createBoard() {
-  for (let i=0; i < width*width; i++) {
-    square = document.createElement('div')
-    square.innerHTML = 0
-    gridDisplay.appendChild(square)
-    squares.push(square)
-  }
-  generate()
-  generate()
-}
-createBoard()
-
-  // generate a new number (either 2 or 4)
-function generate() {
-  randomNumber = Math.floor(Math.random() * squares.length);
-  const randomValue = Math.random() < 0.6 ? 2 : 4; // 60% chance for 2, 40% chance for 4
-  if (squares[randomNumber].innerHTML == 0) {
-      squares[randomNumber].innerHTML = randomValue;
-      checkForGameOver();
-  } else {
-      generate();
-  }
-}
-
-
-//movement functions
-function moveRight() {
-  for (let i=0; i < 16; i++) {
-    if (i % 4 === 0) {
-      let totalOne = squares[i].innerHTML
-      let totalTwo = squares[i+1].innerHTML
-      let totalThree = squares[i+2].innerHTML
-      let totalFour = squares[i+3].innerHTML
-      let row = [parseInt(totalOne), parseInt(totalTwo), parseInt(totalThree), parseInt(totalFour)]
-      let filteredRow = row.filter(num => num)
-      let missing = 4 - filteredRow.length
-      let zeros = Array(missing).fill(0)
-      let newRow = zeros.concat(filteredRow)
-
-      squares[i].innerHTML = newRow[0]
-      squares[i +1].innerHTML = newRow[1]
-      squares[i +2].innerHTML = newRow[2]
-      squares[i +3].innerHTML = newRow[3]
+  try {
+    const storedScore = Number(globalThis.localStorage.getItem('2048-best-score'))
+    if (Number.isSafeInteger(storedScore) && storedScore >= 0) {
+      bestScore = storedScore
     }
+  } catch {
+    storageAvailable = false
   }
-}
 
-function moveLeft() {
-  for (let i=0; i < 16; i++) {
-    if (i % 4 === 0) {
-      let totalOne = squares[i].innerHTML
-      let totalTwo = squares[i+1].innerHTML
-      let totalThree = squares[i+2].innerHTML
-      let totalFour = squares[i+3].innerHTML
-      let row = [parseInt(totalOne), parseInt(totalTwo), parseInt(totalThree), parseInt(totalFour)]
+  for (let rowIndex = 0; rowIndex < 4; rowIndex += 1) {
+    const row = document.createElement('div')
+    row.className = 'grid-row'
+    row.setAttribute('role', 'row')
 
-      let filteredRow = row.filter(num => num)
-      let missing = 4 - filteredRow.length
-      let zeros = Array(missing).fill(0)
-      let newRow = filteredRow.concat(zeros)
-
-      squares[i].innerHTML = newRow[0]
-      squares[i +1].innerHTML = newRow[1]
-      squares[i +2].innerHTML = newRow[2]
-      squares[i +3].innerHTML = newRow[3]
-    }
-  }
-}
-
-function moveUp() {
-  for (let i=0; i < 4; i++) {
-    let totalOne = squares[i].innerHTML
-    let totalTwo = squares[i+width].innerHTML
-    let totalThree = squares[i+(width*2)].innerHTML
-    let totalFour = squares[i+(width*3)].innerHTML
-    let column = [parseInt(totalOne), parseInt(totalTwo), parseInt(totalThree), parseInt(totalFour)]
-
-    let filteredColumn = column.filter(num => num)
-    let missing = 4 - filteredColumn.length
-    let zeros = Array(missing).fill(0)
-    let newColumn = filteredColumn.concat(zeros)
-
-    squares[i].innerHTML = newColumn[0]
-    squares[i +width].innerHTML = newColumn[1]
-    squares[i+(width*2)].innerHTML = newColumn[2]
-    squares[i+(width*3)].innerHTML = newColumn[3]
-  }
-}
-
-function moveDown() {
-  for (let i=0; i < 4; i++) {
-    let totalOne = squares[i].innerHTML
-    let totalTwo = squares[i+width].innerHTML
-    let totalThree = squares[i+(width*2)].innerHTML
-    let totalFour = squares[i+(width*3)].innerHTML
-    let column = [parseInt(totalOne), parseInt(totalTwo), parseInt(totalThree), parseInt(totalFour)]
-
-    let filteredColumn = column.filter(num => num)
-    let missing = 4 - filteredColumn.length
-    let zeros = Array(missing).fill(0)
-    let newColumn = zeros.concat(filteredColumn)
-
-    squares[i].innerHTML = newColumn[0]
-    squares[i +width].innerHTML = newColumn[1]
-    squares[i+(width*2)].innerHTML = newColumn[2]
-    squares[i+(width*3)].innerHTML = newColumn[3]
-  }
-}
-
-//addition function
-function combineRow() {
-  for (let i =0; i < 15; i++) {
-    if (squares[i].innerHTML === squares[i +1].innerHTML) {
-      let combinedTotal = parseInt(squares[i].innerHTML) + parseInt(squares[i +1].innerHTML)
-      squares[i].innerHTML = combinedTotal
-      squares[i +1].innerHTML = 0
-      score += combinedTotal
-      scoreDisplay.innerHTML = score
-    }
-  }
-  checkForWin()
-}
-
-function combineColumn() {
-  for (let i =0; i < 12; i++) {
-    if (squares[i].innerHTML === squares[i +width].innerHTML) {
-      let combinedTotal = parseInt(squares[i].innerHTML) + parseInt(squares[i +width].innerHTML)
-      squares[i].innerHTML = combinedTotal
-      squares[i +width].innerHTML = 0
-      score += combinedTotal
-      scoreDisplay.innerHTML = score
-    }
-  }
-  checkForWin()
-}
-
-//assign functions to keyCodes
-function handleKeyPress(e) {
-  if(e.keyCode === 37) {
-    keyLeft()
-  } else if (e.keyCode === 38) {
-    keyUp()
-  } else if (e.keyCode === 39) {
-    keyRight()
-  } else if (e.keyCode === 40) {
-    keyDown()
-  }
-}
-// Handle keyboard presses
-function handleKeyPress(e) {
-  if (e.keyCode === 37) {
-      keyLeft();
-  } else if (e.keyCode === 38) {
-      keyUp();
-  } else if (e.keyCode === 39) {
-      keyRight();
-  } else if (e.keyCode === 40) {
-      keyDown();
-  }
-}
-document.addEventListener('keyup', handleKeyPress);
-
-let startX, startY;
-let swipeInProgress = false;
-
-function handleTouchStart(event) {
-    startX = event.touches[0].clientX;
-    startY = event.touches[0].clientY;
-    swipeInProgress = true;
-}
-
-function handleTouchMove(event) {
-    if (!swipeInProgress) {
-        return;
+    for (let columnIndex = 0; columnIndex < 4; columnIndex += 1) {
+      const cell = document.createElement('div')
+      cell.className = 'tile'
+      cell.setAttribute('role', 'gridcell')
+      row.appendChild(cell)
+      cells.push(cell)
     }
 
-    event.preventDefault();
-    const endX = event.touches[0].clientX;
-    const endY = event.touches[0].clientY;
+    grid.appendChild(row)
+  }
 
-    const deltaX = startX - endX;
-    const deltaY = startY - endY;
+  function render() {
+    scoreDisplay.textContent = String(state.score)
+    bestScoreDisplay.textContent = String(bestScore)
 
-    if (Math.abs(deltaX) > Math.abs(deltaY)) {
-        if (deltaX > 0) {
-            // Swipe left
-            keyLeft();
-        } else {
-            // Swipe right
-            keyRight();
-        }
-    } else {
-        if (deltaY > 0) {
-            // Swipe up
-            keyUp();
-        } else {
-            // Swipe down
-            keyDown();
-        }
-    }
+    state.board.forEach((value, index) => {
+      const cell = cells[index]
+      cell.dataset.value = String(value)
+      cell.textContent = value === 0 ? '' : String(value)
+      cell.setAttribute('aria-label', value === 0 ? 'Empty' : `${value} tile`)
+    })
+  }
 
-    // Reset the swipe in progress flag
-    swipeInProgress = false;
-}
+  function now() {
+    return globalThis.performance?.now?.() ?? Date.now()
+  }
 
-document.querySelector('.grid').addEventListener('touchstart', handleTouchStart, false);
-document.querySelector('.grid').addEventListener('touchmove', handleTouchMove, false);
-
-document.addEventListener('keyup', handleKeyPress)
-
-function keyRight() {
-  moveRight()
-  combineRow()
-  moveRight()
-  generate()
-}
-
-function keyLeft() {
-  moveLeft()
-  combineRow()
-  moveLeft()
-  generate()
-}
-
-function keyUp() {
-  moveUp()
-  combineColumn()
-  moveUp()
-  generate()
-}
-
-function keyDown() {
-  moveDown()
-  combineColumn()
-  moveDown()
-  generate()
-}
-
-//check if 2048 is in the squares to win
-function checkForWin() {
-  for (let i=0; i < squares.length; i++) {
-    if (squares[i].innerHTML == 2048) {
-      resultDisplay.innerHTML = ' CONGRATULATIONS!! YOU WIN'
-      document.removeEventListener('keyup', control)
-      setTimeout(() => clear(), 3000)
+  function setStage(stage) {
+    for (const id of stages) {
+      document.getElementById(id).hidden = id !== stage
     }
   }
-}
 
-// check if there are no zeros on the board and no possible moves to lose
-function checkForGameOver() {
-  let zeros = 0;
-  for (let i = 0; i < squares.length; i++) {
-      if (squares[i].innerHTML == 0) {
-          zeros++;
+  function setInputEnabled(enabled) {
+    if (inputEnabled === enabled) {
+      return
+    }
+
+    inputEnabled = enabled
+    touchStart = null
+    const method = enabled ? 'addEventListener' : 'removeEventListener'
+    document[method]('keydown', handleKeyDown)
+    grid[method]('touchstart', handleTouchStart)
+    grid[method]('touchend', handleTouchEnd)
+    grid[method]('touchcancel', clearTouchStart)
+  }
+
+  function updateBestScore() {
+    if (state.score <= bestScore) {
+      return
+    }
+
+    bestScore = state.score
+    bestScoreDisplay.textContent = String(bestScore)
+    try {
+      globalThis.localStorage.setItem('2048-best-score', String(bestScore))
+    } catch {
+      if (storageAvailable) {
+        statusDisplay.textContent = 'Local storage is unavailable. Your best score will last only for this visit.'
       }
+      storageAvailable = false
+    }
   }
 
-  // Check for possible moves (horizontally or vertically)
-let canMove = false;
-  for (let i = 0; i < squares.length; i++) {
-      if (
-          i % width < width - 1 &&
-          squares[i].innerHTML == squares[i + 1].innerHTML
-      ) {
-          canMove = true;
-          break;
+  function formatDuration(seconds) {
+    const minutes = Math.floor(seconds / 60)
+    const remainingSeconds = seconds % 60
+    return `${minutes}:${String(remainingSeconds).padStart(2, '0')}`
+  }
+
+  function currentRun() {
+    const durationSeconds = Math.max(0, Math.floor((now() - startedAt) / 1000))
+    return {
+      score: state.score,
+      highestTile: Math.max(...state.board),
+      moves: moveCount,
+      durationSeconds
+    }
+  }
+
+  function makeSubmissionId() {
+    idSequence += 1
+    const uuid = globalThis.crypto?.randomUUID?.()
+    return `2048-${uuid || `${Date.now()}-${idSequence}-${Math.random().toString(36).slice(2)}`}`
+  }
+
+  function showMockSource(source) {
+    mockBadge.hidden = source !== 'development-mock'
+  }
+
+  function showGameOver() {
+    if (gameEnded) {
+      return
+    }
+
+    gameEnded = true
+    setInputEnabled(false)
+    gameInfo.hidden = true
+    grid.hidden = true
+    statusDisplay.className = 'game-status visually-hidden'
+    arcadeScreen.hidden = false
+    arcadeHeading.textContent = 'GAME OVER'
+    rankInvitation.hidden = true
+    notQualified.hidden = true
+    declined.hidden = true
+    mockBadge.hidden = true
+    const run = currentRun()
+    finalRun = run
+    finalScoreDisplay.textContent = String(run.score)
+    highestTileDisplay.textContent = String(run.highestTile)
+    moveCountDisplay.textContent = String(run.moves)
+    durationDisplay.textContent = formatDuration(run.durationSeconds)
+    localBestDisplay.textContent = String(bestScore)
+    statusDisplay.textContent = `Game over. Final score: ${run.score}. Highest tile: ${run.highestTile}.`
+    submissionId = makeSubmissionId()
+    rankResult = null
+    requestRank(gameId, run)
+  }
+
+  async function requestRank(forGameId, run) {
+    setStage('rank-loading')
+    rankErrorTitle.textContent = 'RANK UNAVAILABLE'
+
+    try {
+      const result = await LeaderboardAPI.getProjectedRank({ score: run.score })
+      if (forGameId !== gameId || !gameEnded) {
+        return
       }
-      if (
-          i + width < squares.length &&
-          squares[i].innerHTML == squares[i + width].innerHTML
-      ) {
-          canMove = true;
-          break;
+
+      rankResult = result
+      showMockSource(result.source)
+      rankValue.textContent = result.rank
+        ? (result.rank <= 10 ? `TOP 10 — GLOBAL RANK #${result.rank}` : `GLOBAL RANK #${result.rank}`)
+        : `OUTSIDE THE TOP ${result.leaderboardLimit}`
+      rankDescription.textContent = result.qualifies
+        ? 'This score qualifies for the public leaderboard.'
+        : `This score is outside the configured top ${result.leaderboardLimit}.`
+      rankInvitation.hidden = !result.qualifies
+      notQualified.hidden = result.qualifies
+      declined.hidden = true
+      leaderboardLimit.textContent = String(result.leaderboardLimit)
+      setStage('rank-result')
+    } catch (error) {
+      if (forGameId !== gameId || !gameEnded) {
+        return
       }
+
+      rankErrorTitle.textContent = error.code === 'UNAVAILABLE'
+        ? 'LEADERBOARD OFFLINE'
+        : error.code === 'TIMEOUT'
+          ? 'RANK CHECK TIMED OUT'
+          : 'RANK CHECK FAILED'
+      rankErrorMessage.textContent = error.code === 'UNAVAILABLE'
+        ? 'The leaderboard is offline or not configured. Your score has not been submitted.'
+        : error.code === 'TIMEOUT'
+          ? 'The leaderboard did not respond in time. Check your connection and try again.'
+          : 'The leaderboard could not confirm a rank. Please try again.'
+      setStage('rank-error')
+    }
   }
 
-  if (zeros === 0 && !canMove) {
-      resultDisplay.innerHTML = 'You LOSE';
-      document.removeEventListener('keyup', handleKeyPress);
-      setTimeout(() => clear(), 3000);
+  function handleMove(direction) {
+    if (!inputEnabled) {
+      return
+    }
+
+    const outcome = GameEngine.move(state, direction)
+    if (!outcome.moved) {
+      return
+    }
+
+    state = outcome.state
+    moveCount += 1
+    render()
+    updateBestScore()
+
+    if (state.status !== 'playing') {
+      showGameOver()
+      return
+    }
+
+    statusDisplay.textContent = outcome.scoreDelta > 0
+      ? `Tiles merged. Score: ${state.score}.`
+      : `Score: ${state.score}.`
   }
-}
 
+  function handleKeyDown(event) {
+    const directions = {
+      ArrowLeft: 'left',
+      a: 'left',
+      A: 'left',
+      ArrowUp: 'up',
+      w: 'up',
+      W: 'up',
+      ArrowRight: 'right',
+      d: 'right',
+      D: 'right',
+      ArrowDown: 'down',
+      s: 'down',
+      S: 'down'
+    }
+    const direction = directions[event.key]
 
-  //clear timer
-  function clear() {
-    clearInterval(myTimer)
+    if (direction) {
+      event.preventDefault()
+      handleMove(direction)
+    }
   }
 
+  function handleTouchStart(event) {
+    if (event.touches.length !== 1) {
+      touchStart = null
+      return
+    }
 
-  //add colours
-function addColours() {
-  for (let i=0; i < squares.length; i++) {
-    if (squares[i].innerHTML == 0) squares[i].style.backgroundColor = '#7f7c77'
-    else if (squares[i].innerHTML == 2) squares[i].style.backgroundColor = '#ece0c8'
-    else if (squares[i].innerHTML  == 4) squares[i].style.backgroundColor = '#B2924A' 
-    else if (squares[i].innerHTML  == 8) squares[i].style.backgroundColor = '#f2b077' 
-    else if (squares[i].innerHTML  == 16) squares[i].style.backgroundColor = '#f79462' 
-    else if (squares[i].innerHTML  == 32) squares[i].style.backgroundColor = '#e8c064' 
-    else if (squares[i].innerHTML == 64) squares[i].style.backgroundColor = '#f65d3b' 
-    else if (squares[i].innerHTML == 128) squares[i].style.backgroundColor = '#fd9982' 
-    else if (squares[i].innerHTML == 256) squares[i].style.backgroundColor = '#ead79c' 
-    else if (squares[i].innerHTML == 512) squares[i].style.backgroundColor = '#76daff' 
-    else if (squares[i].innerHTML == 1024) squares[i].style.backgroundColor = '#beeaa5' 
-    else if (squares[i].innerHTML == 2048) squares[i].style.backgroundColor = '#d7d4f0' 
+    const touch = event.touches[0]
+    touchStart = { x: touch.clientX, y: touch.clientY }
   }
-}
-addColours()
 
-var myTimer = setInterval(addColours, 50)
+  function handleTouchEnd(event) {
+    if (!touchStart || event.changedTouches.length !== 1) {
+      touchStart = null
+      return
+    }
 
+    const touch = event.changedTouches[0]
+    const deltaX = touch.clientX - touchStart.x
+    const deltaY = touch.clientY - touchStart.y
+    touchStart = null
+
+    if (Math.max(Math.abs(deltaX), Math.abs(deltaY)) < 30) {
+      return
+    }
+
+    const direction = Math.abs(deltaX) > Math.abs(deltaY)
+      ? (deltaX < 0 ? 'left' : 'right')
+      : (deltaY < 0 ? 'up' : 'down')
+    handleMove(direction)
+  }
+
+  function clearTouchStart() {
+    touchStart = null
+  }
+
+  function showNameError(message) {
+    nameError.textContent = message
+    nameError.hidden = false
+    nameInput.setAttribute('aria-invalid', 'true')
+    nameInput.focus()
+  }
+
+  function clearNameError() {
+    nameError.textContent = ''
+    nameError.hidden = true
+    nameInput.removeAttribute('aria-invalid')
+  }
+
+  function updateNameCounter() {
+    nameCounter.textContent = `${nameInput.value.length} / 12`
+  }
+
+  function enterName() {
+    clearNameError()
+    nameInput.value = submissionPayload?.displayName || ''
+    nameInput.readOnly = Boolean(submissionPayload)
+    updateNameCounter()
+    setStage('name-entry')
+    nameInput.focus()
+  }
+
+  function cancelName() {
+    clearNameError()
+    setStage('rank-result')
+    rankInvitation.hidden = false
+    declined.hidden = true
+  }
+
+  function declineName() {
+    rankInvitation.hidden = true
+    notQualified.hidden = true
+    declined.hidden = false
+    setStage('rank-result')
+  }
+
+  async function submitName() {
+    if (submissionInFlight || submissionConfirmed) {
+      return
+    }
+
+    if (!rankResult?.qualifies) {
+      return
+    }
+
+    if (!submissionPayload) {
+      const displayName = nameInput.value.trim()
+      if (!displayName) {
+        showNameError('Enter a display name before submitting.')
+        return
+      }
+      if (displayName.length > 12) {
+        showNameError('Display names must be 12 characters or fewer.')
+        return
+      }
+      if (!/^[A-Za-z0-9 _-]+$/.test(displayName)) {
+        showNameError('Use letters, numbers, spaces, hyphens or underscores only.')
+        return
+      }
+
+      submissionPayload = { submissionId, displayName, ...finalRun }
+      nameInput.value = displayName
+      nameInput.readOnly = true
+    }
+
+    clearNameError()
+    submissionInFlight = true
+    submitButton.disabled = true
+    setStage('submission-loading')
+    const submittingGameId = gameId
+
+    try {
+      const result = await LeaderboardAPI.submitScore(submissionPayload)
+      if (submittingGameId !== gameId || !gameEnded) {
+        return
+      }
+
+      submissionConfirmed = true
+      showMockSource(result.source)
+      submittedName.textContent = result.displayName
+      submittedScore.textContent = String(result.score)
+      submittedRank.textContent = `#${result.rank}`
+      if (result.source === 'development-mock') {
+        submissionResultTitle.textContent = 'DEVELOPMENT MOCK — SCORE NOT SUBMITTED'
+        submissionResultNote.textContent = 'This simulated result uses no real leaderboard and did not publish your score.'
+        leaderboardLink.hidden = true
+      } else {
+        submissionResultTitle.textContent = 'SCORE RECORDED'
+        submissionResultNote.textContent = 'The backend confirmed your score and rank.'
+        leaderboardLink.hidden = !LeaderboardAPI.getLeaderboardUrl()
+      }
+      setStage('submission-result')
+    } catch (error) {
+      if (submittingGameId !== gameId || !gameEnded) {
+        return
+      }
+
+      submissionErrorMessage.textContent = error.code === 'UNAVAILABLE'
+        ? 'The leaderboard is offline. The score may have been saved; retry safely with the same game-run key.'
+        : error.code === 'TIMEOUT'
+          ? 'No confirmation arrived in time. The score may have been saved; retry safely with the same game-run key.'
+          : `The backend did not confirm this score. ${error.message || 'Check the request and retry.'}`
+      setStage('submission-error')
+    } finally {
+      if (submittingGameId === gameId) {
+        submissionInFlight = false
+        submitButton.disabled = false
+      }
+    }
+  }
+
+  function restartGame() {
+    gameId += 1
+    state = GameEngine.createGame()
+    moveCount = 0
+    startedAt = now()
+    gameEnded = false
+    submissionId = null
+    submissionInFlight = false
+    submissionConfirmed = false
+    submissionPayload = null
+    submitButton.disabled = false
+    rankResult = null
+    finalRun = null
+    nameInput.value = ''
+    nameInput.readOnly = false
+    clearNameError()
+    arcadeScreen.hidden = true
+    gameInfo.hidden = false
+    grid.hidden = false
+    statusDisplay.className = 'game-status'
+    leaderboardLink.hidden = true
+    showMockSource('')
+    render()
+    statusDisplay.textContent = storageAvailable
+      ? 'New game started. Score: 0.'
+      : 'New game started. Local storage is unavailable; your best score will last only for this visit.'
+    setInputEnabled(true)
+    grid.focus()
+  }
+
+  function setLeaderboardState(stateId) {
+    for (const id of leaderboardStates) {
+      document.getElementById(id).hidden = id !== stateId
+    }
+  }
+
+  function renderLeaderboard(entries) {
+    leaderboardEntries.replaceChildren()
+    const numberFormat = new Intl.NumberFormat()
+
+    for (const entry of entries) {
+      const row = document.createElement('tr')
+      const values = [
+        `#${entry.rank}`,
+        entry.displayName,
+        numberFormat.format(entry.score),
+        numberFormat.format(entry.highestTile)
+      ]
+      for (const value of values) {
+        const cell = document.createElement('td')
+        cell.textContent = value
+        row.appendChild(cell)
+      }
+      leaderboardEntries.appendChild(row)
+    }
+  }
+
+  async function loadLeaderboard() {
+    const requestedGameId = gameId
+    setStage('leaderboard-view')
+    setLeaderboardState('leaderboard-loading')
+
+    try {
+      const result = await LeaderboardAPI.getLeaderboard()
+      if (requestedGameId !== gameId || !gameEnded) {
+        return
+      }
+
+      renderLeaderboard(result.entries)
+      setLeaderboardState(result.entries.length ? 'leaderboard-list' : 'leaderboard-empty')
+    } catch (error) {
+      if (requestedGameId !== gameId || !gameEnded) {
+        return
+      }
+
+      leaderboardErrorMessage.textContent = error.message ||
+        'The leaderboard could not be loaded. Check your connection and try again.'
+      setLeaderboardState('leaderboard-error')
+    }
+  }
+
+  document.getElementById('retry-rank').addEventListener('click', () => {
+    if (gameEnded) {
+      requestRank(gameId, finalRun)
+    }
+  })
+  document.getElementById('enter-name').addEventListener('click', enterName)
+  document.getElementById('decline-name').addEventListener('click', declineName)
+  document.getElementById('cancel-name').addEventListener('click', cancelName)
+  leaderboardLink.addEventListener('click', loadLeaderboard)
+  document.getElementById('retry-leaderboard').addEventListener('click', loadLeaderboard)
+  document.getElementById('back-to-result').addEventListener('click', () => {
+    setStage('submission-result')
+  })
+  nameInput.addEventListener('input', () => {
+    clearNameError()
+    updateNameCounter()
+  })
+  nameForm.addEventListener('submit', event => {
+    event.preventDefault()
+    submitName()
+  })
+  document.getElementById('retry-submission').addEventListener('click', submitName)
+  document.getElementById('cancel-submission').addEventListener('click', () => {
+    nameInput.value = submissionPayload?.displayName || ''
+    nameInput.readOnly = Boolean(submissionPayload)
+    updateNameCounter()
+    setStage('name-entry')
+  })
+  restartButton.addEventListener('click', restartGame)
+
+  render()
+  bestScoreDisplay.textContent = String(bestScore)
+  statusDisplay.textContent = storageAvailable
+    ? 'Use the arrow keys or WASD to move tiles. Swipe on the board to play.'
+    : 'Local storage is unavailable; your best score will last only for this visit. Use the arrow keys or WASD to play.'
+  setInputEnabled(true)
 })

@@ -1,0 +1,6 @@
+.env
+backend/data/
+pages-artifact/
+*.db
+*.db-shm
+*.db-wal

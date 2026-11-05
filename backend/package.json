@@ -1,0 +1,22 @@
+{
+  "name": "2048-arcade-api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "migrate": "node src/db/run-migrations.js",
+    "backup": "node src/db/backup.js",
+    "restore": "node src/db/restore.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.2.0",
+    "express": "^5.1.0",
+    "swagger-ui-express": "^5.0.1"
+  }
+}
